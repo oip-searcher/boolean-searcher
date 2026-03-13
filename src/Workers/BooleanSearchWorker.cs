@@ -34,18 +34,18 @@ public sealed class BooleanSearchWorker : BackgroundService
         {
             var opt = _options.Value;
 
-            var tokensPerDocDir = ResolveProjectPath(opt.TokensPerDocDir);
+            var lemmasPerDocDir = ResolveProjectPath(opt.LemmasPerDocDir);
             var indexPath = ResolveProjectPath(opt.IndexPath);
 
-            if (!Directory.Exists(tokensPerDocDir))
-                throw new DirectoryNotFoundException($"TokensPerDocDir not found: {tokensPerDocDir}");
+            if (!Directory.Exists(lemmasPerDocDir))
+                throw new DirectoryNotFoundException($"LemmasPerDocDir not found: {lemmasPerDocDir}");
 
             var indexService = new InvertedIndexService();
 
-            _logger.LogInformation("Building inverted index from {Dir}", tokensPerDocDir);
-            indexService.Build(tokensPerDocDir);
+            _logger.LogInformation("Building lemma-based inverted index from {Dir}", lemmasPerDocDir);
+            indexService.BuildFromLemmas(lemmasPerDocDir);
 
-            _logger.LogInformation("Unique terms: {Count}", indexService.InvertedIndex.Count);
+            _logger.LogInformation("Unique lemmas: {Count}", indexService.InvertedIndex.Count);
 
             indexService.Save(indexPath);
             _logger.LogInformation("Index saved to {Path}", indexPath);
@@ -66,11 +66,13 @@ public sealed class BooleanSearchWorker : BackgroundService
 
     private void RunSearchLoop(InvertedIndexService indexService, CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Введите запрос с AND, OR, NOT и скобками.");
+        Console.WriteLine("Введите запрос с AND, OR, NOT и скобками.");
+        Console.WriteLine("Для выхода введите: exit");
+        Console.WriteLine();
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Запрос > ");
+            Console.Write("Запрос > ");
             var query = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrWhiteSpace(query))
@@ -91,7 +93,8 @@ public sealed class BooleanSearchWorker : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogInformation("Ошибка: {m}", ex.Message);
+                Console.WriteLine($"Ошибка: {ex.Message}");
+                Console.WriteLine();
             }
         }
     }
@@ -101,6 +104,7 @@ public sealed class BooleanSearchWorker : BackgroundService
         if (docIds.Count == 0)
         {
             Console.WriteLine("Ничего не найдено.");
+            Console.WriteLine();
             return;
         }
 

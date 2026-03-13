@@ -13,9 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="index.txt">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
+      <PackageReference Include="Nestor" Version="0.5.2" />
     </ItemGroup>
 
 </Project>
