@@ -2,16 +2,16 @@ using System.Text;
 
 namespace BooleanSearcher.Services;
 
-public class InvertedIndexService
+public sealed class InvertedIndexService
 {
     public Dictionary<string, HashSet<int>> InvertedIndex { get; } =
         new(StringComparer.OrdinalIgnoreCase);
 
     public Dictionary<int, string> DocIdToFileName { get; } = new();
 
-    public void Build(string tokensPerDocDir)
+    public void BuildFromLemmas(string lemmasPerDocDir)
     {
-        var files = Directory.GetFiles(tokensPerDocDir, "*_tokens.txt")
+        var files = Directory.GetFiles(lemmasPerDocDir, "*_lemmas.txt")
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -19,23 +19,28 @@ public class InvertedIndexService
 
         foreach (var file in files)
         {
-            var tokens = File.ReadAllLines(file, Encoding.UTF8)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x.Trim());
+            var lines = File.ReadAllLines(file, Encoding.UTF8)
+                .Where(x => !string.IsNullOrWhiteSpace(x));
 
-            foreach (var token in tokens)
+            foreach (var line in lines)
             {
-                if (!InvertedIndex.TryGetValue(token, out var docs))
+                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) continue;
+
+                var lemma = parts[0].Trim();
+                if (string.IsNullOrWhiteSpace(lemma)) continue;
+
+                if (!InvertedIndex.TryGetValue(lemma, out var docs))
                 {
                     docs = new HashSet<int>();
-                    InvertedIndex[token] = docs;
+                    InvertedIndex[lemma] = docs;
                 }
 
                 docs.Add(docId);
             }
 
-            var name = Path.GetFileNameWithoutExtension(file);
-            const string suffix = "_tokens";
+            var name = Path.GetFileNameWithoutExtension(file); // 1_lemmas
+            const string suffix = "_lemmas";
 
             var originalFileName = name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
                 ? name[..^suffix.Length] + ".txt"

@@ -2,11 +2,12 @@ using System.Text.RegularExpressions;
 
 namespace BooleanSearcher.Services;
 
-public class BooleanQueryParser
+public sealed class BooleanQueryParser
 {
     private readonly List<string> _tokens;
     private readonly Dictionary<string, HashSet<int>> _index;
     private readonly HashSet<int> _allDocs;
+    private readonly LemmaGrouper _lemmaGrouper;
     private int _position;
 
     public BooleanQueryParser(
@@ -14,9 +15,10 @@ public class BooleanQueryParser
         Dictionary<string, HashSet<int>> index,
         HashSet<int> allDocs)
     {
-        _tokens = Tokenize(query);
         _index = index;
         _allDocs = allDocs;
+        _lemmaGrouper = new LemmaGrouper();
+        _tokens = Tokenize(query);
     }
 
     public HashSet<int> Parse()
@@ -85,9 +87,19 @@ public class BooleanQueryParser
         }
 
         var token = ConsumeTerm();
-        return _index.TryGetValue(token, out var docs)
+        var lemma = NormalizeTerm(token);
+
+        return _index.TryGetValue(lemma, out var docs)
             ? new HashSet<int>(docs)
             : new HashSet<int>();
+    }
+
+    private string NormalizeTerm(string term)
+    {
+        var lemma = _lemmaGrouper.GetLemma(term);
+        return string.IsNullOrWhiteSpace(lemma)
+            ? term.ToLowerInvariant()
+            : lemma.ToLowerInvariant();
     }
 
     private string ConsumeTerm()
